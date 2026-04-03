@@ -1,10 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace ProductService.Application.DTOs
+﻿namespace ProductService.Application.DTOs
 {
-    internal class ReviewDTO
-    {
-    }
+    public record ReviewDTO(
+        Guid Id,
+        Guid UserId,
+        Guid ProductId,
+        int Rating,
+        string Comment,
+        DateTime CreatedDate
+    );
 }

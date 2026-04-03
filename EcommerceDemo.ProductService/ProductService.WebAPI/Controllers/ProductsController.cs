@@ -8,6 +8,7 @@ using ProductService.Application.Common;
 using ProductService.Application.DTOs;
 using ProductService.Application.Queries.GetProductById;
 using ProductService.Application.Queries.GetProducts;
+using ProductService.Application.Queries.GetReviewsById;
 using ProductService.Domain.Entities;
 
 namespace ProductService.WebAPI.Controllers
@@ -24,7 +25,7 @@ namespace ProductService.WebAPI.Controllers
             return Ok(products);
         }
         [HttpGet("{id:guid}")]
-        public async Task<IActionResult> GetById([FromRoute] Guid id)
+        public async Task<ActionResult<ProductDTO>> GetById([FromRoute] Guid id)
         {
             // Implementation for getting a product by id
             var product = await mediator.Send(new GetProductByIdQuery(id));
@@ -32,7 +33,7 @@ namespace ProductService.WebAPI.Controllers
         }
         [HttpPost]
         [Authorize(Policy = "AdminOnly")]
-        public async Task<IActionResult> Create([FromBody] CreateProductCommand command)
+        public async Task<ActionResult<ProductDTO>> Create([FromBody] CreateProductCommand command)
         {
             // Implementation for creating a product
             var createdProduct = await mediator.Send(command);
@@ -48,11 +49,23 @@ namespace ProductService.WebAPI.Controllers
         }
         [HttpDelete("{id:guid}")]
         [Authorize(Policy = "AdminOnly")]
-        public async Task<IActionResult> Delete([FromRoute] Guid id)
+        public async Task<ActionResult<int>> Delete([FromRoute] Guid id)
         {
             // Implementation for deleting a product
             var result = await mediator.Send(new DeleteProductCommand(id));
             return Ok(result);
+        }
+        [HttpGet("{productId:guid}/reviews")]
+        public async Task<ActionResult<PagedResponse<ReviewDTO>>> GetReviewsByProductId([FromRoute] Guid productId)
+        {
+            // Implementation for getting reviews of a product by product id
+            // This will likely involve sending a query to get the reviews for the specified product
+            var reviews = await mediator.Send(new GetReviewsByProductIdQuery(productId));
+            if (reviews == null)
+            {
+                return NotFound();
+            }
+            return Ok(reviews);
         }
     }
 }

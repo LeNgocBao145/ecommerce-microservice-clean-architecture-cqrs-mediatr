@@ -11,7 +11,6 @@ namespace ProductService.Application.Mappings
         public MappingProfile()
         {
             CreateMap<Product, ProductDTO>()
-                .ForMember(dest => dest.CategoryIds, opt => opt.MapFrom(src => src.Categories.Select(c => c.Id).ToList()))
                 .ForMember(dest => dest.CategoryNames, opt => opt.MapFrom(src => src.Categories.Select(c => c.Name).ToList()));
             CreateMap<CreateProductCommand, Product>();
             CreateMap<UpdateProductCommand, Product>();

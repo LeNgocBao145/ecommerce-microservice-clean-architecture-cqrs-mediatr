@@ -1,6 +1,12 @@
-﻿namespace ProductService.Application.Commands.CreateReview
+﻿using MediatR;
+using ProductService.Application.DTOs;
+
+namespace ProductService.Application.Commands.CreateReview
 {
-    public class CreateReviewCommand
-    {
-    }
+    public record CreateReviewCommand(
+        Guid UserId,
+        Guid ProductId,
+        string Comment,
+        int Rating
+    ) : IRequest<ReviewDTO>;
 }

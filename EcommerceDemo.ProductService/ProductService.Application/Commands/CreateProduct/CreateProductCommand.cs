@@ -11,5 +11,5 @@ namespace ProductService.Application.Commands.CreateProduct
         int Stock,
         decimal Price,
         List<Guid> CategoryIds
-    ) : IProductCommand, IRequest<ProductResponseDTO>;
+    ) : IProductCommand, IRequest<ProductDTO>;
 }

@@ -66,5 +66,15 @@ namespace ProductService.Infrastructure.Repositories
         {
             return await _context.Reviews.CountAsync();
         }
+
+        public async Task<bool> CheckIsEligibleForReviewAsync(Guid productId, Guid userId)
+        {
+            // Kiểm tra nếu người dùng đã đánh giá sản phẩm này chưa
+            var existingReview = await _context.ReviewEligibilities
+                .AsNoTracking()
+                .FirstOrDefaultAsync(r => r.ProductId == productId && r.UserId == userId);
+            if (existingReview == null) return false;
+            return true; // Nếu chưa có đánh giá nào, người dùng có thể đánh giá
+        }
     }
 }
