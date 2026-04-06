@@ -1,4 +1,4 @@
-﻿namespace CartService.Domain.Entities
+﻿namespace OrderService.Domain.Entities
 {
     public class CartItem
     {
@@ -8,5 +8,6 @@
         public int Quantity { get; set; }
         public decimal UnitPrice { get; set; }
         public DateTime CreatedDate { get; set; }
+        public Cart Cart { get; set; } = null!;
     }
 }

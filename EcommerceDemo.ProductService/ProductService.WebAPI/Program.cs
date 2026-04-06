@@ -8,8 +8,11 @@ using System.Text.Json.Serialization;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+    });
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
@@ -21,12 +24,10 @@ builder.Services.AddInfrastructureServices(builder.Configuration);
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
-builder.Services.ConfigureHttpJsonOptions(options =>
-{
-    options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
-    // Hoặc nếu muốn LUÔN show null:
-    // options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.Never;
-});
+
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("AdminOnly", policy =>
+        policy.RequireAuthenticatedUser().RequireRole("Admin"));
 
 var app = builder.Build();
 

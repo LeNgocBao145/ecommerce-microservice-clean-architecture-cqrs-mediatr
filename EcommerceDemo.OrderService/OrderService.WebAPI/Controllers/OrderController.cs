@@ -1,34 +1,27 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using MediatR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using OrderService.Application.DTOs;
+using OrderService.Application.Queries.GetOrderById;
+using System.Security.Claims;
 
 namespace OrderService.WebAPI.Controllers
 {
+    [Authorize]
     [Route("api/v1/[controller]")]
     [ApiController]
-    public class OrderController : ControllerBase
+    public class OrdersController(ISender mediator) : ControllerBase
     {
         [HttpGet]
-        public IActionResult GetCart(Guid userId)
+        public async Task<ActionResult<IEnumerable<OrderDTO>>> GetOrders()
         {
-            // Logic to retrieve the cart
-            return Ok();
-        }
-        //[HttpPost("add")]
-        //public IActionResult CreateCart([FromBody] Cart cart)
-        //{
-        //    // Logic to create a new cart
-        //    return Ok();
-        //}
-        //[HttpPut("items/{itemId}")]
-        //public IActionResult UpdateCartItem(Guid itemId, [FromBody] CartItems cartItem)
-        //{
-        //    // Logic to update a cart item
-        //    return Ok();
-        //}
-        [HttpDelete]
-        public IActionResult DeleteCart(Guid cartId)
-        {
-            // Logic to delete a cart
-            return Ok();
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+            var orders = await mediator.Send(new GetOrdersByUserIdQuery(Guid.Parse(userId!)));
+            return Ok(orders);
         }
     }
 }

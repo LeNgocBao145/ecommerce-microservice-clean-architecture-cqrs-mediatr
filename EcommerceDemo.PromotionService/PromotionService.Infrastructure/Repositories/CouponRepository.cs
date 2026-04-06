@@ -1,39 +1,29 @@
-﻿using OrderService.Domain.Entities;
-using OrderService.Domain.Interfaces;
+﻿using PromotionService.Domain.Entities;
+using PromotionService.Domain.Interfaces;
+using PromotionService.Infrastructure.Persistence;
 using System.Linq.Expressions;
 
 namespace PromotionService.Infrastructure.Repositories
 {
-    public class CouponRepository : IOrderRepository
+    public class CouponRepository(AppDbContext context) : ICouponRepository
     {
-        public Task<Order> CreateAsync(Order entity)
+        public async Task<Coupon> CreateAsync(Coupon entity)
         {
-            throw new NotImplementedException();
+            context.Coupons.Add(entity);
+            await context.SaveChangesAsync();
+            return entity;
         }
 
-        public Task<int> DeleteAsync(Guid id)
+        public async Task<Coupon> UpdateAsync(Coupon entity)
         {
-            throw new NotImplementedException();
+            context.Coupons.Update(entity);
+            await context.SaveChangesAsync();
+            return entity;
         }
 
-        public Task<Order?> FindByIdAsync(Guid id)
+        public async Task<Coupon> GetByAsync(Expression<Func<Coupon, bool>> predicate)
         {
-            throw new NotImplementedException();
-        }
-
-        public Task<IEnumerable<Order>> GetAllAsync()
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<Order?> GetByAsync(Expression<Func<Order, bool>> predicate)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<Order?> UpdateAsync(Order entity)
-        {
-            throw new NotImplementedException();
+            return await context.Coupons.FirstOrDefaultAsync();
         }
     }
 }

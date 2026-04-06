@@ -1,6 +1,7 @@
-﻿namespace CartService.Application.Commands.CreateCart
+﻿using MediatR;
+using OrderService.Application.DTOs;
+
+namespace OrderService.Application.Commands.CreateCart
 {
-    public class GetCartQuery
-    {
-    }
+    public record CreateCartCommand(Guid UserId) : IRequest<CartDTO>;
 }

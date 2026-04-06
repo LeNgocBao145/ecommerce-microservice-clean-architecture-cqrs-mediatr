@@ -8,5 +8,8 @@
         /// <returns></returns>
 
         Task<int> SaveAsync(CancellationToken cancellationToken = default);
+
+        ICartRepository CartRepository { get; }
+        IOrderRepository OrderRepository { get; }
     }
 }

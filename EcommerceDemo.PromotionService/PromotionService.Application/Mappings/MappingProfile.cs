@@ -1,4 +1,4 @@
-﻿namespace OrderService.Application.Mappings
+﻿namespace PromotionService.Application.Mappings
 {
     public class MappingProfile
     {

@@ -1,15 +1,15 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using OrderService.Domain.Interfaces;
+﻿using OrderService.Domain.Interfaces;
+using OrderService.Infrastructure.Persistence;
 
 namespace OrderService.Infrastructure.Repositories
 {
-    public class UnitOfWork(DbContext context, IServiceProvider serviceProvider) : IUnitOfWork, IDisposable
+    public class UnitOfWork(AppDbContext context,
+        ICartRepository cartRepository, IOrderRepository orderRepository) : IUnitOfWork, IDisposable
     {
         private bool _disposed = false;
 
-        public ICartRepository UserRepository => serviceProvider.GetRequiredService<ICartRepository>();
-        public IOrderRepository OrderRepository => serviceProvider.GetRequiredService<IOrderRepository>();
+        public ICartRepository CartRepository => cartRepository;
+        public IOrderRepository OrderRepository => orderRepository;
 
         public async Task<int> SaveAsync(CancellationToken cancellationToken)
         {

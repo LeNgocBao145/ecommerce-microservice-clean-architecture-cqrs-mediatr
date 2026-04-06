@@ -27,9 +27,10 @@ builder.Services.AddReverseProxy()
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("authenticated", policy => policy.RequireAuthenticatedUser())
     .AddPolicy("AdminOnly", policy =>
-        policy.RequireRole("Admin"))
+        policy.RequireAuthenticatedUser().RequireRole("Admin"))
     .AddPolicy("UserOnly", policy =>
-        policy.RequireRole("User", "Admin"));
+        policy.RequireAuthenticatedUser().RequireRole("User", "Admin"));
+
 builder.Services.AddRateLimiter(rateLimiterOptions =>
 {
     rateLimiterOptions.AddFixedWindowLimiter("fixed", options =>

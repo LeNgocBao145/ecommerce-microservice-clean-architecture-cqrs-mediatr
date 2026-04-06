@@ -1,39 +1,64 @@
-﻿using OrderService.Domain.Entities;
+﻿using Microsoft.EntityFrameworkCore;
+using OrderService.Domain.Entities;
 using OrderService.Domain.Interfaces;
+using OrderService.Infrastructure.Persistence;
 using System.Linq.Expressions;
 
-namespace PromotionService.Infrastructure.Repositories
+namespace OrderService.Infrastructure.Repositories
 {
-    public class OrderRepository : IOrderRepository
+    public class OrderRepository(AppDbContext context) : IOrderRepository
     {
-        public Task<Order> CreateAsync(Order entity)
+        private readonly AppDbContext _context = context;
+
+        public async Task CreateAsync(Order entity)
         {
-            throw new NotImplementedException();
+            await _context.Orders.AddAsync(entity);
         }
 
-        public Task<int> DeleteAsync(Guid id)
+        public async Task DeleteAsync(Guid id)
         {
-            throw new NotImplementedException();
+            var order = await _context.Orders.FindAsync(id);
+
+            if (order != null)
+            {
+                _context.Orders.Remove(order);
+            }
+
+            return;
         }
 
-        public Task<Order?> FindByIdAsync(Guid id)
+        public async Task<Order?> FindByIdAsync(Guid id)
         {
-            throw new NotImplementedException();
+            return await _context.Orders
+                .Include(o => o.OrderItems)
+                .FirstOrDefaultAsync(o => o.Id == id);
         }
 
-        public Task<IEnumerable<Order>> GetAllAsync()
+        public async Task<IEnumerable<Order>> GetAllAsync()
         {
-            throw new NotImplementedException();
+            return await _context.Orders
+                .Include(o => o.OrderItems)
+                .ToListAsync();
         }
 
-        public Task<Order?> GetByAsync(Expression<Func<Order, bool>> predicate)
+        public async Task<Order?> GetOrderByAsync(Expression<Func<Order, bool>> predicate)
         {
-            throw new NotImplementedException();
+            return await _context.Orders
+                .Include(o => o.OrderItems)
+                .FirstOrDefaultAsync(predicate);
         }
 
-        public Task<Order?> UpdateAsync(Order entity)
+        public async Task<IEnumerable<Order>> GetOrdersByAsync(Expression<Func<Order, bool>> predicate)
         {
-            throw new NotImplementedException();
+            return await _context.Orders
+                .Include(o => o.OrderItems)
+                .Where(predicate)
+                .ToListAsync();
+        }
+
+        public void UpdateAsync(Order entity)
+        {
+            _context.Orders.Update(entity);
         }
     }
 }

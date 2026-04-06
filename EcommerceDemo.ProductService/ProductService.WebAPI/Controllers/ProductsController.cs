@@ -39,11 +39,12 @@ namespace ProductService.WebAPI.Controllers
             var createdProduct = await mediator.Send(command);
             return Ok(createdProduct);
         }
-        [HttpPut]
+        [HttpPut("{id:guid}")]
         [Authorize(Policy = "AdminOnly")]
-        public async Task<ActionResult<Product>> Update([FromBody] UpdateProductCommand command)
+        public async Task<ActionResult<Product>> Update([FromRoute] Guid id, [FromBody] UpdateProductCommand command)
         {
             // Implementation for updating a product
+            command = command with { Id = id }; // Ensure the command has the correct product ID
             var updatedProduct = await mediator.Send(command);
             return Ok(updatedProduct);
         }

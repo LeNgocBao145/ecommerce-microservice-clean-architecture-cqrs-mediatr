@@ -1,6 +1,7 @@
-﻿namespace CartService.Application.Queries.GetCart
+﻿using MediatR;
+using OrderService.Application.DTOs;
+
+namespace OrderService.Application.Queries.GetCart
 {
-    public class GetCartQuery
-    {
-    }
+    public record GetCartQuery(Guid UserId) : IRequest<CartDTO>;
 }
