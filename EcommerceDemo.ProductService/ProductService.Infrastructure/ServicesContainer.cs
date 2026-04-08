@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Confluent.Kafka;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ProductService.Domain.Interfaces;
@@ -16,6 +17,19 @@ namespace ProductService.Infrastructure
             services.AddScoped<IProductRepository, ProductRepository>();
             services.AddScoped<IReviewRepository, ReviewRepository>();
             services.AddScoped<ICategoryRepository, CategoryRepository>();
+
+            services.AddSingleton(new ConsumerConfig
+            {
+                BootstrapServers = configuration["Kafka:BootstrapServers"],
+                GroupId = configuration["Kafka:GroupId"],
+                AutoOffsetReset = AutoOffsetReset.Earliest
+            });
+
+            services.AddSingleton<IConsumer<string, string>>(sp =>
+            {
+                var config = sp.GetRequiredService<ConsumerConfig>();
+                return new ConsumerBuilder<string, string>(config).Build();
+            });
 
             return services;
         }

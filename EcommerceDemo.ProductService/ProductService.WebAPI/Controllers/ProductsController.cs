@@ -9,7 +9,6 @@ using ProductService.Application.DTOs;
 using ProductService.Application.Queries.GetProductById;
 using ProductService.Application.Queries.GetProducts;
 using ProductService.Application.Queries.GetReviewsById;
-using ProductService.Domain.Entities;
 
 namespace ProductService.WebAPI.Controllers
 {
@@ -41,7 +40,7 @@ namespace ProductService.WebAPI.Controllers
         }
         [HttpPut("{id:guid}")]
         [Authorize(Policy = "AdminOnly")]
-        public async Task<ActionResult<Product>> Update([FromRoute] Guid id, [FromBody] UpdateProductCommand command)
+        public async Task<ActionResult<ProductDTO>> Update([FromRoute] Guid id, [FromBody] UpdateProductCommand command)
         {
             // Implementation for updating a product
             command = command with { Id = id }; // Ensure the command has the correct product ID

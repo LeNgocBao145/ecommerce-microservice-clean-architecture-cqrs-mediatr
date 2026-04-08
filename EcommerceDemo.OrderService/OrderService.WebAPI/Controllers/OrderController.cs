@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OrderService.Application.Commands.CreateOrder;
 using OrderService.Application.DTOs;
 using OrderService.Application.Queries.GetOrderById;
 using System.Security.Claims;
@@ -22,6 +23,29 @@ namespace OrderService.WebAPI.Controllers
             }
             var orders = await mediator.Send(new GetOrdersByUserIdQuery(Guid.Parse(userId!)));
             return Ok(orders);
+        }
+
+        [HttpPost("checkout")]
+        public async Task<ActionResult<OrderDTO>> CheckoutOrder(string? coupon, string? notes)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
+            var checkoutCommand = new CheckoutOrderCommand(
+                Guid.Parse(userId!),
+                notes,
+                coupon
+            );
+
+            var order = await mediator.Send(checkoutCommand);
+            if (order == null)
+            {
+                return BadRequest("Failed to checkout.");
+            }
+            return Ok(order);
         }
     }
 }

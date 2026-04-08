@@ -1,0 +1,17 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "OrderService.GrpcClients";
+
+service Product {
+	rpc GetProductStock (ProductStockRequest) returns (ProductStockResponse);
+}
+
+message ProductStockRequest {
+	int32 productId = 1;
+}
+
+message ProductStockResponse {
+	bool success = 1;
+	int32 stock = 2;
+	string message = 3;
+}

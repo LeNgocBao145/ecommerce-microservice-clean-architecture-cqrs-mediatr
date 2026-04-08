@@ -5,7 +5,8 @@ namespace OrderService.Domain.Interfaces
 {
     public interface ICartRepository
     {
-        Task CreateAsync(Cart entity);
+        Task CreateCartAsync(Cart entity);
+        Task CreateCartItemAsync(CartItem entity);
         Task<Cart?> FindByIdAsync(Guid id);
         Task<IEnumerable<Cart>> GetAllAsync();
         Task<Cart?> GetCartByAsync(Expression<Func<Cart, bool>> predicate);

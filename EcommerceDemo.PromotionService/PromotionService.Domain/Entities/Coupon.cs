@@ -4,7 +4,7 @@ namespace PromotionService.Domain.Entities
 {
     public class Coupon
     {
-        public Guid Code { get; set; }
+        public string Code { get; set; } = null!;
         public DiscountType Type { get; set; }
         public decimal Value { get; set; }
         public decimal MinOrderValue { get; set; }

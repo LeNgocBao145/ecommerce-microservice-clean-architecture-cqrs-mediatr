@@ -20,7 +20,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\EcommerceDemo.SharedLibrary\Ecommerce.SharedLibrary\Ecommerce.SharedLibrary.csproj" />
     <ProjectReference Include="..\OrderService.Domain\OrderService.Domain.csproj" />
+    <ProjectReference Include="..\OrderService.GrpcClients\OrderService.GrpcClients.csproj" />
   </ItemGroup>
 
 </Project>

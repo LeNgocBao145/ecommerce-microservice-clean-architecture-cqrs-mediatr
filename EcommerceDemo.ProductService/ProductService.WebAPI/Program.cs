@@ -3,6 +3,7 @@ using Ecommerce.SharedLibrary.Middlewares;
 using ProductService.Application;
 using ProductService.Domain.Exceptions;
 using ProductService.Infrastructure;
+using ProductService.WebAPI.Grpc;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -29,6 +30,8 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy("AdminOnly", policy =>
         policy.RequireAuthenticatedUser().RequireRole("Admin"));
 
+builder.Services.AddGrpc();
+
 var app = builder.Build();
 
 app.UseMiddleware<ListenToOnlyApiGateway>();
@@ -46,6 +49,8 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 
 app.UseAuthorization();
+
+app.MapGrpcService<ProductGrpcService>();
 
 app.MapControllers();
 

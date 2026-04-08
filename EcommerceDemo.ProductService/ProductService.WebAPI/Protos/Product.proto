@@ -1,0 +1,17 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "ProductService.WebAPI";
+
+service Product {
+	rpc GetProductStock (ProductStockRequest) returns (ProductStockResponse);
+}
+
+message ProductStockRequest {
+	string productId = 1;
+}
+
+message ProductStockResponse {
+	bool success = 1;
+	int32 stock = 2;
+	string message = 3;
+}

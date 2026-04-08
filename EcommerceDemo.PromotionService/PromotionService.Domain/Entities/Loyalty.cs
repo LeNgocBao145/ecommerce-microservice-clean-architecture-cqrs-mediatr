@@ -5,7 +5,7 @@ namespace PromotionService.Domain.Entities
 {
     public class Loyalty
     {
-        public int UserId { get; set; }
+        public Guid UserId { get; set; }
         public int Points { get; set; }
         public UserRank Rank { get; set; }
 

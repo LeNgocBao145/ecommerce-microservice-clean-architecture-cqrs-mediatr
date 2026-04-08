@@ -8,5 +8,6 @@ namespace ProductService.Domain.Interfaces
         public IQueryable<ProductReview> GetQueryable();
         Task<int> CountAsync();
         Task<bool> CheckIsEligibleForReviewAsync(Guid productId, Guid userId);
+        Task<bool> AddReviewEligibilityAsync(ReviewEligibility entity);
     }
 }

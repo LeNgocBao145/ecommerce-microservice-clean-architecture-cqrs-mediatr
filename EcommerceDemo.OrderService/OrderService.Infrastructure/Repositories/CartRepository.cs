@@ -10,9 +10,14 @@ namespace OrderService.Infrastructure.Repositories
     {
         private readonly AppDbContext _context = context;
 
-        public async Task CreateAsync(Cart entity)
+        public async Task CreateCartAsync(Cart entity)
         {
             await _context.Carts.AddAsync(entity);
+        }
+
+        public async Task CreateCartItemAsync(CartItem entity)
+        {
+            await _context.CartItems.AddAsync(entity);
         }
 
         public async void DeleteAsync(Guid id)

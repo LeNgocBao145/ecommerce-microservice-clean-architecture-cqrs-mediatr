@@ -19,6 +19,13 @@ namespace ProductService.Infrastructure.Repositories
             return entity;
         }
 
+        public async Task<bool> AddReviewEligibilityAsync(ReviewEligibility entity)
+        {
+            await _context.ReviewEligibilities.AddAsync(entity);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
         public async Task<int> DeleteAsync(Guid id)
         {
             var product = await _context.Reviews.FindAsync(id);

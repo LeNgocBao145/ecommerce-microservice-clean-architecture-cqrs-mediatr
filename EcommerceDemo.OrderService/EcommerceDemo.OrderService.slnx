@@ -1,6 +1,8 @@
 <Solution>
+  <Project Path="../EcommerceDemo.SharedLibrary/Ecommerce.SharedLibrary/Ecommerce.SharedLibrary.csproj" />
   <Project Path="OrderService.Application/OrderService.Application.csproj" />
   <Project Path="OrderService.Domain/OrderService.Domain.csproj" />
+  <Project Path="OrderService.GrpcClients/OrderService.GrpcClients.csproj" Id="56d8b191-2593-42d6-8156-f91a6199469d" />
   <Project Path="OrderService.Infrastructure/OrderService.Infrastructure.csproj" />
   <Project Path="OrderService.WebAPI/OrderService.WebAPI.csproj" />
 </Solution>

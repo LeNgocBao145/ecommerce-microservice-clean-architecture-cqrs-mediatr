@@ -1,4 +1,5 @@
-﻿using PromotionService.Domain.Entities;
+﻿using Microsoft.EntityFrameworkCore;
+using PromotionService.Domain.Entities;
 using PromotionService.Domain.Interfaces;
 using PromotionService.Infrastructure.Persistence;
 using System.Linq.Expressions;
@@ -14,16 +15,28 @@ namespace PromotionService.Infrastructure.Repositories
             return entity;
         }
 
-        public async Task<Coupon> UpdateAsync(Coupon entity)
+        public async Task<Coupon> UpdateCouponAsync(Coupon entity)
         {
             context.Coupons.Update(entity);
             await context.SaveChangesAsync();
             return entity;
         }
 
-        public async Task<Coupon> GetByAsync(Expression<Func<Coupon, bool>> predicate)
+        public async Task<Loyalty> UpdateLoyaltyAsync(Loyalty entity)
         {
-            return await context.Coupons.FirstOrDefaultAsync();
+            context.Loyalties.Update(entity);
+            await context.SaveChangesAsync();
+            return entity;
+        }
+
+        public async Task<Coupon?> GetCouponByAsync(Expression<Func<Coupon, bool>> predicate)
+        {
+            return await context.Coupons.FirstOrDefaultAsync(predicate);
+        }
+
+        public async Task<Loyalty?> GetLoyaltyByAsync(Expression<Func<Loyalty, bool>> predicate)
+        {
+            return await context.Loyalties.FirstOrDefaultAsync(predicate);
         }
     }
 }
