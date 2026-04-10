@@ -11,7 +11,7 @@ namespace OrderService.Domain.Interfaces
         Task<IEnumerable<Cart>> GetAllAsync();
         Task<Cart?> GetCartByAsync(Expression<Func<Cart, bool>> predicate);
         void UpdateAsync(Cart entity);
-        void DeleteAsync(Guid id);
+        Task DeleteAsync(Guid id);
         Task<CartItem?> GetCartItemByAsync(Expression<Func<CartItem, bool>> predicate);
         Task<IEnumerable<CartItem>> GetCartItemsByAsync(Expression<Func<CartItem, bool>> predicate);
         void UpdateAsync(CartItem cartItem);

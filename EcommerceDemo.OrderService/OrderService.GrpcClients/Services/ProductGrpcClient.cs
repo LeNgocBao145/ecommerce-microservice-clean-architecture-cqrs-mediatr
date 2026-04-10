@@ -29,20 +29,19 @@ namespace OrderService.GrpcClients.Services
         /// <param name="cancellationToken">Cancellation token for the operation</param>
         /// <returns>ProductStockResponse containing stock information</returns>
         /// <exception cref="ArgumentException">Thrown when product ID is invalid</exception>
-        public async Task<ProductStockResponse> GetProductStockAsync(int productId, CancellationToken cancellationToken = default)
+        public async Task<ProductStockResponse> GetProductStock(string productId, CancellationToken cancellationToken = default)
         {
-            if (productId <= 0)
+            if (string.IsNullOrEmpty(productId.ToString()))
             {
-                throw new ArgumentException("Product ID must be greater than 0.", nameof(productId));
+                throw new ArgumentNullException(nameof(productId));
             }
-
             try
             {
                 _logger.LogInformation("Calling Product Service to get stock for product ID: {ProductId}", productId);
 
                 var request = new ProductStockRequest
                 {
-                    ProductId = productId
+                    ProductId = productId.ToString()
                 };
 
                 var response = await _client.GetProductStockAsync(request, cancellationToken: cancellationToken);
@@ -86,6 +85,8 @@ namespace OrderService.GrpcClients.Services
                     Message = "An unexpected error occurred while retrieving product stock information"
                 };
             }
+
+            throw new ArgumentException("Product ID must be greater than 0.", nameof(productId));
         }
     }
 }

@@ -7,6 +7,13 @@ namespace Ecommerce.SharedLibrary.Middlewares
     {
         public async Task InvokeAsync(HttpContext context)
         {
+            // Skip middleware for gRPC requests
+            if (context.Request.ContentType?.StartsWith("application/grpc") == true)
+            {
+                await next(context);
+                return;
+            }
+
             var secret = context.Request.Headers["X-Internal-Gateway-Token"];
 
             if (string.IsNullOrEmpty(secret) || secret != config["Authentication:Key"])

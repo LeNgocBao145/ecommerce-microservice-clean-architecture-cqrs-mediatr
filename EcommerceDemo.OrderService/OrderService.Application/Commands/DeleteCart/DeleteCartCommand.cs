@@ -1,6 +1,14 @@
-﻿namespace CartService.Application.Commands.DeleteCart
+﻿using MediatR;
+
+namespace OrderService.Application.Commands.DeleteCart
 {
-    public class DeleteCartCommand
-    {
-    }
+    /// <summary>
+    /// Command to delete cart items for a user after successful order placement.
+    /// </summary>
+    public record DeleteCartCommand(Guid UserId) : IRequest<DeleteCartResult>;
+
+    /// <summary>
+    /// Result DTO for delete cart operation.
+    /// </summary>
+    public record DeleteCartResult(bool Success, int DeletedItemCount, string Message);
 }

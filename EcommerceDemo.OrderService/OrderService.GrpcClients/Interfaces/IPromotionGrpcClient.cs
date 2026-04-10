@@ -14,6 +14,6 @@ namespace OrderService.WebAPI.GrpcClients.Interfaces
         /// <param name="totalAmount">The total purchase amount</param>
         /// <param name="cancellationToken">Cancellation token for the operation</param>
         /// <returns>Discount amount if coupon is valid; otherwise 0</returns>
-        Task<GetDiscountResponse> GetDiscount(string couponCode, int totalAmount);
+        Task<GetDiscountResponse> GetDiscount(string couponCode, string totalAmount);
     }
 }

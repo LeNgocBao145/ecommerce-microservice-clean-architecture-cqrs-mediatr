@@ -2,7 +2,9 @@
 using Mapster;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
+using OrderService.Application.Interfaces;
 using OrderService.Application.Mappings;
+using OrderService.Application.Services;
 using ProductService.Application.Behaviors;
 using System.Reflection;
 
@@ -22,6 +24,8 @@ namespace OrderService.Application
                 //validation
                 ctg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehaviour<,>));
             });
+
+            services.AddScoped<IStockValidationService, StockValidationService>();
 
             return services;
         }

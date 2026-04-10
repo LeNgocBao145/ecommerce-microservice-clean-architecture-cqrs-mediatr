@@ -1,5 +1,6 @@
 using Ecommerce.SharedLibrary.DependencyInjection;
 using Ecommerce.SharedLibrary.Middlewares;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using ProductService.Application;
 using ProductService.Domain.Exceptions;
 using ProductService.Infrastructure;
@@ -32,6 +33,18 @@ builder.Services.AddAuthorizationBuilder()
 
 builder.Services.AddGrpc();
 
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(5001, o =>
+    {
+        o.Protocols = HttpProtocols.Http1;
+    });
+    options.ListenAnyIP(5005, listenOptions =>
+    {
+        listenOptions.Protocols = HttpProtocols.Http2;
+    });
+});
+
 var app = builder.Build();
 
 app.UseMiddleware<ListenToOnlyApiGateway>();
@@ -44,7 +57,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 app.UseAuthentication();
 

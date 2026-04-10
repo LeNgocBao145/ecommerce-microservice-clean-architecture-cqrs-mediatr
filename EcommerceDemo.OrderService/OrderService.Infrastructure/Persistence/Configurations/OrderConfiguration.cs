@@ -16,12 +16,13 @@ namespace OrderService.Infrastructure.Persistence.Configurations
             builder.Property(o => o.TotalAmount).HasColumnType("decimal(18,2)").HasDefaultValue(0);
             builder.Property(o => o.Notes).HasColumnType("nvarchar(255)");
             builder.Property(o => o.Status)
-                    .HasConversion<string>();
+                    .HasConversion<string>()
+                    .IsRequired();
 
             builder.ToTable(t =>
             {
                 t.HasCheckConstraint("CK_Order_Status",
-                    "[Status] IN ('Pending', 'Processing', 'Shipped', 'Delivered','Cancelled', 'Refunded') default 'Pending'");
+                    "[Status] IN ('Pending', 'Processing', 'Shipped', 'Delivered','Cancelled', 'Refunded', 'Completed')");
                 t.HasCheckConstraint("CK_Order_Subtotal_NonNegative",
                     "[Subtotal] >= 0");
                 t.HasCheckConstraint("CK_Order_DiscountAmount_NonNegative",

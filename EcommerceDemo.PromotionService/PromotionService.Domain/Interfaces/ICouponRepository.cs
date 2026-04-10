@@ -10,5 +10,6 @@ namespace PromotionService.Domain.Interfaces
         Task<Loyalty> UpdateLoyaltyAsync(Loyalty entity);
         Task<Coupon?> GetCouponByAsync(Expression<Func<Coupon, bool>> predicate);
         Task<Loyalty?> GetLoyaltyByAsync(Expression<Func<Loyalty, bool>> predicate);
+        Task<bool> CouponCodeExistsAsync(string code);
     }
 }

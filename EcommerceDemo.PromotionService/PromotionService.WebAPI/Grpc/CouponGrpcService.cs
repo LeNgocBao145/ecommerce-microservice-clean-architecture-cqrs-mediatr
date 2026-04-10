@@ -22,13 +22,13 @@ namespace PromotionService.WebAPI.Grpc
         public override async Task<GetDiscountResponse> GetDiscount(GetDiscountRequest request, ServerCallContext context)
         {
             // Validation 1: Check if coupon exists
-            var coupon = await _couponRepository.GetByAsync(c => c.Code == request.CouponCode);
+            var coupon = await _couponRepository.GetCouponByAsync(c => c.Code == request.CouponCode);
             if (coupon == null)
             {
                 return new GetDiscountResponse
                 {
                     Success = false,
-                    DiscountAmount = 0,
+                    DiscountAmount = "0.00",
                     Message = "Coupon code not found."
                 };
             }
@@ -40,7 +40,7 @@ namespace PromotionService.WebAPI.Grpc
                 return new GetDiscountResponse
                 {
                     Success = false,
-                    DiscountAmount = 0,
+                    DiscountAmount = "0.00",
                     Message = "Coupon has expired or is not yet valid."
                 };
             }
@@ -51,29 +51,31 @@ namespace PromotionService.WebAPI.Grpc
                 return new GetDiscountResponse
                 {
                     Success = false,
-                    DiscountAmount = 0,
+                    DiscountAmount = "0.00",
                     Message = "Coupon usage limit exceeded."
                 };
             }
 
+            decimal totalAmount = decimal.Parse(request.TotalAmount);
+
             // Validation 4: Check minimum order value requirement
-            if (request.TotalAmount < coupon.MinOrderValue)
+            if (totalAmount < coupon.MinOrderValue)
             {
                 return new GetDiscountResponse
                 {
                     Success = false,
-                    DiscountAmount = 0,
+                    DiscountAmount = "0.00",
                     Message = $"Order total must be at least {coupon.MinOrderValue} to use this coupon."
                 };
             }
 
             // Calculate discount amount based on coupon type
-            int discountAmount = CalculateDiscount(coupon, request.TotalAmount);
+            decimal discountAmount = CalculateDiscount(coupon, totalAmount);
 
             return new GetDiscountResponse
             {
                 Success = true,
-                DiscountAmount = discountAmount,
+                DiscountAmount = discountAmount.ToString("F2"),
                 Message = "Discount applied successfully."
             };
         }
@@ -85,12 +87,12 @@ namespace PromotionService.WebAPI.Grpc
         /// <param name="coupon">The coupon entity with discount type and value</param>
         /// <param name="totalAmount">The order total amount to apply discount to</param>
         /// <returns>Calculated discount amount</returns>
-        private int CalculateDiscount(Coupon coupon, int totalAmount)
+        private decimal CalculateDiscount(Coupon coupon, decimal totalAmount)
         {
             return coupon.Type switch
             {
-                DiscountType.FIXED_AMOUNT => (int)coupon.Value,
-                DiscountType.PERCENTAGE => (int)((totalAmount * coupon.Value) / 100),
+                DiscountType.FIXED_AMOUNT => coupon.Value,
+                DiscountType.PERCENTAGE => (totalAmount * coupon.Value) / 100,
                 _ => 0
             };
         }

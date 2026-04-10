@@ -17,6 +17,7 @@ namespace PromotionService.Infrastructure.Repositories
 
         public async Task<Coupon> UpdateCouponAsync(Coupon entity)
         {
+            entity.UpdatedAt = DateTime.UtcNow;
             context.Coupons.Update(entity);
             await context.SaveChangesAsync();
             return entity;
@@ -37,6 +38,11 @@ namespace PromotionService.Infrastructure.Repositories
         public async Task<Loyalty?> GetLoyaltyByAsync(Expression<Func<Loyalty, bool>> predicate)
         {
             return await context.Loyalties.FirstOrDefaultAsync(predicate);
+        }
+
+        public async Task<bool> CouponCodeExistsAsync(string code)
+        {
+            return await context.Coupons.AnyAsync(c => c.Code == code);
         }
     }
 }

@@ -1,7 +1,9 @@
 ﻿using Confluent.Kafka;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PromotionService.Domain.Interfaces;
+using PromotionService.Infrastructure.Persistence;
 using PromotionService.Infrastructure.Repositories;
 
 namespace PromotionService.Infrastructure
@@ -10,6 +12,9 @@ namespace PromotionService.Infrastructure
     {
         public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
         {
+            services.AddDbContext<AppDbContext>(options =>
+                options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+
             // Register repositories
             services.AddScoped<ICouponRepository, CouponRepository>();
 

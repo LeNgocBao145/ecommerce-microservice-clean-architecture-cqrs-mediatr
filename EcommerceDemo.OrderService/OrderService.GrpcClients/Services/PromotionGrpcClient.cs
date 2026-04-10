@@ -31,14 +31,14 @@ namespace OrderService.WebAPI.GrpcClients.Services
         /// <param name="cancellationToken">Cancellation token for the operation</param>
         /// <returns>GetDiscountResponse containing discount information</returns>
         /// <exception cref="ArgumentException">Thrown when coupon code is null or empty</exception>
-        public async Task<GetDiscountResponse> GetDiscount(string couponCode, int totalAmount)
+        public async Task<GetDiscountResponse> GetDiscount(string couponCode, string totalAmount)
         {
             if (string.IsNullOrWhiteSpace(couponCode))
             {
                 throw new ArgumentException("Coupon code cannot be null or empty.", nameof(couponCode));
             }
 
-            if (totalAmount < 0)
+            if (decimal.Parse(totalAmount) < 0)
             {
                 throw new ArgumentException("Total amount cannot be negative.", nameof(totalAmount));
             }
@@ -72,7 +72,7 @@ namespace OrderService.WebAPI.GrpcClients.Services
                 return new GetDiscountResponse
                 {
                     Success = false,
-                    DiscountAmount = 0,
+                    DiscountAmount = "0.00",
                     Message = $"Service error: {ex.Status.Detail}"
                 };
             }
@@ -83,7 +83,7 @@ namespace OrderService.WebAPI.GrpcClients.Services
                 return new GetDiscountResponse
                 {
                     Success = false,
-                    DiscountAmount = 0,
+                    DiscountAmount = "0.00",
                     Message = "An unexpected error occurred while retrieving discount information"
                 };
             }

@@ -34,7 +34,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseMiddleware<ListenToOnlyApiGateway>();
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 app.UseAuthorization();
 

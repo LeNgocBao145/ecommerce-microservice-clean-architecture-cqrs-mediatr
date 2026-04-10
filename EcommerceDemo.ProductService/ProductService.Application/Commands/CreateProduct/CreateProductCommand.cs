@@ -10,6 +10,6 @@ namespace ProductService.Application.Commands.CreateProduct
         string Description,
         int Stock,
         decimal Price,
-        List<Guid> CategoryIds
+        List<Guid>? CategoryIds
     ) : IProductCommand, IRequest<ProductDTO>;
 }

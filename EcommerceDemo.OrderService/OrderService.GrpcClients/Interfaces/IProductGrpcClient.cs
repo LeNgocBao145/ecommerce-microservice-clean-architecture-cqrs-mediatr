@@ -11,6 +11,6 @@ namespace OrderService.GrpcClients.Interfaces
         /// <param name="productId">The product ID to check stock</param>
         /// <param name="cancellationToken">Cancellation token for the operation</param>
         /// <returns>Product stock information</returns>
-        //Task<ProductStockResponse> GetProductStock(int productId);
+        Task<ProductStockResponse> GetProductStock(string productId, CancellationToken cancellationToken = default);
     }
 }

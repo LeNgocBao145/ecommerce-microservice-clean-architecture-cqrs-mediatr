@@ -6,6 +6,6 @@
         string Description { get; }
         int Stock { get; }
         decimal Price { get; }
-        List<Guid> CategoryIds { get; }
+        List<Guid>? CategoryIds { get; }
     }
 }

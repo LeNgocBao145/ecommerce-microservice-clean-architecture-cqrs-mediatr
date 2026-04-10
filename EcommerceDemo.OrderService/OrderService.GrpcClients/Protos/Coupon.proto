@@ -8,11 +8,11 @@ service CouponService {
 
 message GetDiscountRequest {
 	string CouponCode = 1;
-	float TotalAmount = 2;
+	string TotalAmount = 2;
 }
 
 message GetDiscountResponse {
 	bool Success = 1;
-	float DiscountAmount = 2;
+	string DiscountAmount = 2;
 	string Message = 3;
 }

@@ -1,5 +1,7 @@
-﻿using MediatR;
+﻿using MapsterMapper;
+using MediatR;
 using Microsoft.Extensions.Logging;
+using OrderService.Application.Commands.DeleteCart;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
 using OrderService.Domain.Entities;
@@ -10,212 +12,284 @@ namespace OrderService.Application.Commands.CreateOrder
 {
     /// <summary>
     /// Handler for processing checkout order commands.
-    /// Manages order creation, coupon validation, and event publishing.
+    /// Manages order creation, inventory validation, coupon validation, and event publishing.
+    /// Implements Clean Architecture: Orchestrates use cases from domain and application layers.
     /// </summary>
     public class CheckoutOrderCommandHandler(
         IUnitOfWork unitOfWork,
         IEventBus eventBus,
+        IMapper mapper,
         IPromotionGrpcClient promotionGrpcClient,
+        IStockValidationService stockValidationService,
+        IMediator mediator,
         ILogger<CheckoutOrderCommandHandler> logger)
         : IRequestHandler<CheckoutOrderCommand, OrderDTO>
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         private readonly IEventBus _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
+        private readonly IMapper _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         private readonly IPromotionGrpcClient _promotionGrpcClient = promotionGrpcClient ?? throw new ArgumentNullException(nameof(promotionGrpcClient));
+        private readonly IStockValidationService _stockValidationService = stockValidationService ?? throw new ArgumentNullException(nameof(stockValidationService));
+        private readonly IMediator _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         private readonly ILogger<CheckoutOrderCommandHandler> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         /// <summary>
-        /// Handles the checkout order command by creating an order from cart items,
-        /// validating coupon codes, and publishing order events.
+        /// Handles the checkout order command.
+        /// Flow: Retrieve Cart → Validate Stock → Validate Coupon → Create Order → Delete Cart → Publish Events
         /// </summary>
-        /// <param name="request">The checkout order command containing user ID, notes, and coupon code</param>
-        /// <param name="cancellationToken">Cancellation token for the operation</param>
-        /// <returns>OrderDTO containing the created order information</returns>
-        /// <exception cref="Exception">Thrown when cart is not found or is empty</exception>
         public async Task<OrderDTO> Handle(CheckoutOrderCommand request, CancellationToken cancellationToken)
         {
             try
             {
-                _logger.LogInformation("Processing checkout for user: {UserId}", request.UserId);
+                _logger.LogInformation("Starting checkout process for user: {UserId}", request.UserId);
 
-                // Retrieve user's cart
-                var cart = await _unitOfWork.CartRepository.GetCartByAsync(c => c.UserId == request.UserId);
+                // Step 1: Retrieve cart
+                var cart = await GetAndValidateCartAsync(request.UserId, cancellationToken);
 
-                if (cart == null)
-                {
-                    _logger.LogWarning("Cart not found for user: {UserId}", request.UserId);
-                    throw new InvalidOperationException("Cart not found for the user.");
-                }
+                // Step 2: Validate inventory
+                await ValidateStockAsync(cart, cancellationToken);
 
-                if (cart.CartItems == null || cart.CartItems.Count == 0)
-                {
-                    _logger.LogWarning("Cart is empty for user: {UserId}", request.UserId);
-                    throw new InvalidOperationException("Cart is empty. Cannot proceed with checkout.");
-                }
+                // Step 3: Calculate totals and validate coupon
+                var (subtotal, discountAmount) = await CalculateTotalsAsync(request.CouponCode, request.UserId, cart, cancellationToken);
 
-                // Calculate subtotal from cart items
-                decimal subtotal = cart.CartItems.Sum(ci => ci.UnitPrice * ci.Quantity);
-                decimal discountAmount = 0;
+                // Step 4: Create order
+                var order = CreateOrderFromCart(request, cart, subtotal, discountAmount);
 
-                // Validate coupon code and get discount if provided
-                if (!string.IsNullOrWhiteSpace(request.CouponCode))
-                {
-                    _logger.LogInformation("Validating coupon code: {CouponCode} for user: {UserId}", request.CouponCode, request.UserId);
+                // Step 5: Track order (add to DbContext - chưa save)
+                await PersistOrderAsync(order, cancellationToken);
 
-                    discountAmount = await ValidateAndGetDiscountAsync(request.CouponCode, (int)subtotal, cancellationToken);
-                }
+                // Step 6: Delete cart (track deletion - chưa save)
+                await DeleteCartAsync(request.UserId, cancellationToken);
 
-                // Create order
-                var totalAmount = subtotal - discountAmount;
-                var order = new Order
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = request.UserId,
-                    CouponCode = request.CouponCode,
-                    Status = Domain.Enums.OrderStatus.Pending,
-                    Subtotal = subtotal,
-                    DiscountAmount = discountAmount,
-                    TotalAmount = totalAmount,
-                    Notes = request.Notes,
-                    CreatedAt = DateTime.UtcNow
-                };
+                // Step 7: Save tất cả thay đổi (Order create + Cart delete)
+                await _unitOfWork.SaveAsync(cancellationToken);
 
-                // Create order items from cart items
-                order.OrderItems = new List<OrderItem>();
-                foreach (var cartItem in cart.CartItems)
-                {
-                    var orderItem = new OrderItem
-                    {
-                        Id = Guid.NewGuid(),
-                        OrderId = order.Id,
-                        ProductId = cartItem.ProductId,
-                        Quantity = cartItem.Quantity,
-                        UnitPrice = cartItem.UnitPrice,
-                        TotalPrice = cartItem.UnitPrice * cartItem.Quantity,
-                        CreatedAt = DateTime.UtcNow
-                    };
-                    order.OrderItems.Add(orderItem);
-                }
+                _logger.LogInformation("Order created successfully. OrderId: {OrderId}, UserId: {UserId}", order.Id, request.UserId);
 
-                // Save order to database
-                await _unitOfWork.OrderRepository.CreateAsync(order);
-                await _unitOfWork.SaveAsync();
+                // Step 8: Publish events (fire-and-forget)
+                await PublishOrderEventsAsync(order, cancellationToken);
 
-                _logger.LogInformation("Order created successfully with ID: {OrderId} for user: {UserId}", order.Id, request.UserId);
-
-                // Publish order event
-                await PublishOrderEventAsync(order, cancellationToken);
-
-                // Clear cart after successful order creation
-                foreach (var cartItem in cart.CartItems)
-                {
-                    _unitOfWork.CartRepository.DeleteAsync(cartItem.Id);
-                }
-                await _unitOfWork.SaveAsync();
-
-                // Map to DTO and return
-                return MapToOrderDTO(order);
+                return _mapper.Map<OrderDTO>(order);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while processing checkout for user: {UserId}", request.UserId);
+                _logger.LogError(ex, "Checkout process failed for user: {UserId}. Error: {ErrorMessage}", request.UserId, ex.Message);
                 throw;
             }
         }
 
         /// <summary>
-        /// Validates coupon code and retrieves discount amount from Promotion Service.
+        /// Retrieves and validates user's cart (Single Responsibility).
         /// </summary>
-        /// <param name="couponCode">The coupon code to validate</param>
-        /// <param name="totalAmount">The total purchase amount</param>
-        /// <param name="cancellationToken">Cancellation token for the operation</param>
-        /// <returns>Discount amount if coupon is valid; otherwise 0</returns>
-        private async Task<decimal> ValidateAndGetDiscountAsync(string couponCode, int totalAmount, CancellationToken cancellationToken)
+        private async Task<Cart> GetAndValidateCartAsync(Guid userId, CancellationToken cancellationToken)
+        {
+            var cart = await _unitOfWork.CartRepository.GetCartByAsync(c => c.UserId == userId);
+
+            if (cart == null)
+            {
+                _logger.LogWarning("Cart not found for user: {UserId}", userId);
+                throw new InvalidOperationException($"Cart not found for user {userId}.");
+            }
+
+            if (cart.CartItems == null || !cart.CartItems.Any())
+            {
+                _logger.LogWarning("Cart is empty for user: {UserId}", userId);
+                throw new InvalidOperationException("Cannot proceed with checkout. Cart is empty.");
+            }
+
+            return cart;
+        }
+
+        /// <summary>
+        /// Validates stock availability for all items in the cart (Single Responsibility).
+        /// Uses gRPC to check stock levels from Product Service.
+        /// </summary>
+        private async Task ValidateStockAsync(Cart cart, CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("Validating stock for {ItemCount} cart items", cart.CartItems.Count);
+
+            foreach (var cartItem in cart.CartItems)
+            {
+                await _stockValidationService.ValidateStockAsync(
+                    cartItem.ProductId.ToString(),
+                    cartItem.Quantity,
+                    cancellationToken);
+            }
+
+            _logger.LogInformation("All cart items passed stock validation");
+        }
+
+        /// <summary>
+        /// Calculates order totals and validates coupon (Single Responsibility).
+        /// </summary>
+        private async Task<(decimal Subtotal, decimal DiscountAmount)> CalculateTotalsAsync(
+            string? couponCode,
+            Guid userId,
+            Cart cart,
+            CancellationToken cancellationToken)
+        {
+            decimal subtotal = cart.CartItems.Sum(ci => ci.UnitPrice * ci.Quantity);
+            decimal discountAmount = 0m; // Explicitly initialize to 0
+
+            if (!string.IsNullOrWhiteSpace(couponCode))
+            {
+                _logger.LogInformation("Validating coupon: {CouponCode} for user: {UserId}", couponCode, userId);
+                discountAmount = await ValidateAndGetDiscountAsync(couponCode, subtotal, cancellationToken);
+            }
+            else
+            {
+                _logger.LogInformation("No coupon code provided for user: {UserId}, discount amount set to 0", userId);
+            }
+
+            return (subtotal, discountAmount);
+        }
+
+        /// <summary>
+        /// Creates order entity from cart (Domain Entity Factory Pattern).
+        /// </summary>
+        private Order CreateOrderFromCart(
+            CheckoutOrderCommand request,
+            Cart cart,
+            decimal subtotal,
+            decimal discountAmount)
+        {
+            var totalAmount = subtotal - discountAmount;
+
+            var order = new Order
+            {
+                UserId = request.UserId,
+                CouponCode = string.IsNullOrWhiteSpace(request.CouponCode) ? string.Empty : request.CouponCode,
+                Subtotal = subtotal,
+                DiscountAmount = discountAmount >= 0 ? discountAmount : 0m, // Ensure non-negative value
+                TotalAmount = totalAmount >= 0 ? totalAmount : 0m,
+                Notes = request.Notes,
+                OrderItems = []
+            };
+
+            foreach (var cartItem in cart.CartItems)
+            {
+                var orderItem = new OrderItem
+                {
+                    OrderId = order.Id,
+                    ProductId = cartItem.ProductId,
+                    Quantity = cartItem.Quantity,
+                    UnitPrice = cartItem.UnitPrice,
+                    TotalPrice = cartItem.UnitPrice * cartItem.Quantity,
+                };
+                order.OrderItems.Add(orderItem);
+            }
+
+            return order;
+        }
+
+        /// <summary>
+        /// Persists order to database (Single Responsibility).
+        /// </summary>
+        private async Task PersistOrderAsync(Order order, CancellationToken cancellationToken)
+        {
+            await _unitOfWork.OrderRepository.CreateAsync(order);
+            //order.Status = OrderStatus.
+            //await _unitOfWork.SaveAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// Deletes cart using mediator pattern (Decoupling from delete logic).
+        /// Follows Dependency Inversion - uses mediator instead of direct repository calls.
+        /// </summary>
+        private async Task DeleteCartAsync(Guid userId, CancellationToken cancellationToken)
         {
             try
             {
-                var response = await _promotionGrpcClient.GetDiscount(couponCode, totalAmount);
+                var deleteCartCommand = new DeleteCartCommand(userId);
+                var deleteResult = await _mediator.Send(deleteCartCommand, cancellationToken);
 
-                if (response.Success && response.DiscountAmount > 0)
+                if (deleteResult.Success)
                 {
-                    _logger.LogInformation("Coupon {CouponCode} is valid. Discount amount: {DiscountAmount}",
-                        couponCode, response.DiscountAmount);
-                    return (decimal)response.DiscountAmount;
+                    _logger.LogInformation("Cart deleted successfully for user: {UserId}. Items deleted: {Count}",
+                        userId, deleteResult.DeletedItemCount);
                 }
-
-                _logger.LogWarning("Coupon {CouponCode} validation failed: {Message}", couponCode, response.Message);
-                return 0;
+                else
+                {
+                    _logger.LogWarning("Failed to delete cart for user: {UserId}. Message: {Message}",
+                        userId, deleteResult.Message);
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error validating coupon {CouponCode}", couponCode);
-                // Return 0 discount on error to allow checkout to proceed without discount
-                return 0;
+                _logger.LogError(ex, "Error deleting cart for user: {UserId} after order creation", userId);
+                // Don't throw - order already created, cart deletion failure shouldn't rollback order
             }
         }
 
         /// <summary>
-        /// Publishes order creation event to message broker for other services.
+        /// Validates coupon and retrieves discount amount (Single Responsibility).
         /// </summary>
-        /// <param name="order">The created order</param>
-        /// <param name="cancellationToken">Cancellation token for the operation</param>
-        private async Task PublishOrderEventAsync(Order order, CancellationToken cancellationToken)
+        private async Task<decimal> ValidateAndGetDiscountAsync(
+            string couponCode,
+            decimal totalAmount,
+            CancellationToken cancellationToken)
         {
             try
             {
-                // Event for review eligibility with userId and productIds
+                var response = await _promotionGrpcClient.GetDiscount(
+                    couponCode,
+                    totalAmount.ToString("F2")
+                );
+
+                if (response.Success && decimal.TryParse(response.DiscountAmount, out var discountAmount) && discountAmount > 0)
+                {
+                    _logger.LogInformation("Coupon valid: {CouponCode}, Discount: {DiscountAmount}",
+                        couponCode, discountAmount);
+                    return discountAmount;
+                }
+
+                _logger.LogWarning("Coupon validation failed: {CouponCode}, Message: {Message}",
+                    couponCode, response.Message);
+                return 0m;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error validating coupon: {CouponCode}", couponCode);
+                return 0m;
+            }
+        }
+
+        /// <summary>
+        /// Publishes order events to message broker (Fire-and-forget pattern).
+        /// </summary>
+        private async Task PublishOrderEventsAsync(Order order, CancellationToken cancellationToken)
+        {
+            try
+            {
                 var reviewEligibilityEvent = new
                 {
                     order.UserId,
                     ProductIds = order.OrderItems?.Select(oi => oi.ProductId).ToList() ?? []
                 };
 
-                // Event for loyalty points with userId and totalAmount
                 var loyaltyPointsEvent = new
                 {
                     order.UserId,
                     order.TotalAmount
                 };
 
-                await _eventBus.PublishCompletedOrderAsync(order.Id.ToString(), "review-egilibities", reviewEligibilityEvent);
-                await _eventBus.PublishCompletedOrderAsync(order.Id.ToString(), "update-user-loyalty-points", loyaltyPointsEvent);
-                _logger.LogInformation("Order event published for order: {OrderId}", order.Id);
+                await _eventBus.PublishCompletedOrderAsync(
+                    order.Id.ToString(),
+                    "review-eligibilities",
+                    reviewEligibilityEvent);
+
+                await _eventBus.PublishCompletedOrderAsync(
+                    order.Id.ToString(),
+                    "update-user-loyalty-points",
+                    loyaltyPointsEvent);
+
+                _logger.LogInformation("Order events published for order: {OrderId}", order.Id);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error publishing order event for order: {OrderId}", order.Id);
-                // Don't throw - order is already created, event publishing failure shouldn't rollback the order
+                _logger.LogError(ex, "Error publishing order events for order: {OrderId}", order.Id);
+                // Don't throw - order already created
             }
-        }
-
-        /// <summary>
-        /// Maps Order entity to OrderDTO.
-        /// </summary>
-        /// <param name="order">The order entity to map</param>
-        /// <returns>OrderDTO representation of the order</returns>
-        private static OrderDTO MapToOrderDTO(Order order)
-        {
-            return new OrderDTO(
-                order.Id,
-                order.UserId,
-                order.Status,
-                order.CouponCode,
-                order.Subtotal,
-                order.DiscountAmount,
-                order.TotalAmount,
-                order.Notes,
-                order.CreatedAt,
-                order.OrderItems?.Select(oi => new OrderItemDTO
-                {
-                    Id = oi.Id,
-                    ProductId = oi.ProductId,
-                    ProductName = oi.ProductName,
-                    Quantity = oi.Quantity,
-                    UnitPrice = oi.UnitPrice,
-                    TotalPrice = oi.TotalPrice,
-                    CreatedAt = oi.CreatedAt
-                }).ToList() ?? new List<OrderItemDTO>()
-            );
         }
     }
 }

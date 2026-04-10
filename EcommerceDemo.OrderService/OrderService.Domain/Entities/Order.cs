@@ -7,7 +7,7 @@ namespace OrderService.Domain.Entities
         public Guid Id { get; set; }
         public Guid UserId { get; set; }
         public string? CouponCode { get; set; }
-        public OrderStatus Status { get; set; }
+        public OrderStatus Status { get; set; } = OrderStatus.Pending;
         public decimal Subtotal { get; set; }
         public decimal DiscountAmount { get; set; }
         public decimal TotalAmount { get; set; }

@@ -61,7 +61,7 @@ namespace AuthService.Application.Services
                 issuer: config.GetSection("Authentication:Issuer").Value,
                 audience: config.GetSection("Authentication:Audience").Value,
                 claims: claims,
-                expires: DateTime.Now.AddMinutes(15),
+                expires: DateTime.Now.AddMinutes(240),
                 signingCredentials: credentials
             );
 

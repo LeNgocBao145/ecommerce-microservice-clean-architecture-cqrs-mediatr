@@ -7,7 +7,7 @@ service Product {
 }
 
 message ProductStockRequest {
-	int32 productId = 1;
+	string productId = 1;
 }
 
 message ProductStockResponse {

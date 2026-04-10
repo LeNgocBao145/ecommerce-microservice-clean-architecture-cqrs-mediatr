@@ -12,8 +12,8 @@ using OrderService.Infrastructure.Persistence;
 namespace OrderService.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260406045753_First")]
-    partial class First
+    [Migration("20260409165357_Second")]
+    partial class Second
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -84,11 +84,16 @@ namespace OrderService.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("CouponCode")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<decimal>("DiscountAmount")
-                        .HasColumnType("decimal(18,2)");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
 
                     b.Property<string>("Notes")
                         .HasColumnType("nvarchar(255)");
@@ -98,10 +103,14 @@ namespace OrderService.Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Subtotal")
-                        .HasColumnType("decimal(18,2)");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
 
                     b.Property<decimal>("TotalAmount")
-                        .HasColumnType("decimal(18,2)");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier");
@@ -114,7 +123,7 @@ namespace OrderService.Infrastructure.Migrations
                         {
                             t.HasCheckConstraint("CK_Order_DiscountAmount_NonNegative", "[DiscountAmount] >= 0");
 
-                            t.HasCheckConstraint("CK_Order_Status", "[Status] IN ('Pending', 'Processing', 'Shipped', 'Delivered','Cancelled', 'Refunded')");
+                            t.HasCheckConstraint("CK_Order_Status", "[Status] IN ('Pending', 'Processing', 'Shipped', 'Delivered','Cancelled', 'Refunded', 'Completed')");
 
                             t.HasCheckConstraint("CK_Order_Subtotal_NonNegative", "[Subtotal] >= 0");
 

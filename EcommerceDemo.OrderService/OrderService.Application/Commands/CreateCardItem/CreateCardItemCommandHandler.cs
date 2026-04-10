@@ -21,12 +21,12 @@ namespace OrderService.Application.Commands.CreateCardItem
         public async Task<CartItemDTO> Handle(CreateCardItemCommand request, CancellationToken cancellationToken)
         {
             // Verify product stock before adding to cart
-            //var stockResponse = await _productGrpcClient.GetProductStock(request.ProductId);
+            var stockResponse = await _productGrpcClient.GetProductStock(request.ProductId.ToString(), cancellationToken);
 
-            //if (!stockResponse.Success || stockResponse.Stock < request.Quantity)
-            //{
-            //    throw new InvalidOperationException($"Insufficient stock for product. Available: {stockResponse.Stock}");
-            //}
+            if (!stockResponse.Success || stockResponse.Stock < request.Quantity)
+            {
+                throw new InvalidOperationException($"Insufficient stock for product. Available: {stockResponse.Stock}");
+            }
 
             // Map the command to a CartItem entity
             var cartItem = mapper.Map<CartItem>(request);

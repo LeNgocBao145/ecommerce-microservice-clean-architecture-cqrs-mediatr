@@ -14,6 +14,7 @@ namespace OrderService.WebAPI.Controllers
     public class OrdersController(ISender mediator) : ControllerBase
     {
         [HttpGet]
+        [Authorize(Policy = "UserOnly")]
         public async Task<ActionResult<IEnumerable<OrderDTO>>> GetOrders()
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -26,7 +27,8 @@ namespace OrderService.WebAPI.Controllers
         }
 
         [HttpPost("checkout")]
-        public async Task<ActionResult<OrderDTO>> CheckoutOrder(string? coupon, string? notes)
+        [Authorize(Policy = "UserOnly")]
+        public async Task<ActionResult<OrderDTO>> CheckoutOrder([FromBody] CheckoutRequestDTO request)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (userId == null)
@@ -36,8 +38,8 @@ namespace OrderService.WebAPI.Controllers
 
             var checkoutCommand = new CheckoutOrderCommand(
                 Guid.Parse(userId!),
-                notes,
-                coupon
+                request.Notes,
+                request.Coupon
             );
 
             var order = await mediator.Send(checkoutCommand);

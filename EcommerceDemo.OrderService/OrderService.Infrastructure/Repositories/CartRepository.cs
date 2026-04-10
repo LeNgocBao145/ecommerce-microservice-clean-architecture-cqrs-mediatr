@@ -20,7 +20,7 @@ namespace OrderService.Infrastructure.Repositories
             await _context.CartItems.AddAsync(entity);
         }
 
-        public async void DeleteAsync(Guid id)
+        public async Task DeleteAsync(Guid id)
         {
             var cart = await _context.Carts.FindAsync(id);
 
@@ -47,8 +47,9 @@ namespace OrderService.Infrastructure.Repositories
         public async Task<Cart?> GetCartByAsync(Expression<Func<Cart, bool>> predicate)
         {
             return await _context.Carts
+                .Where(predicate)
                 .Include(c => c.CartItems)
-                .FirstOrDefaultAsync(predicate);
+                .FirstOrDefaultAsync();
         }
 
         public async Task<CartItem?> GetCartItemByAsync(Expression<Func<CartItem, bool>> predicate)
