@@ -20,13 +20,23 @@ namespace OrderService.Infrastructure.Repositories
             await _context.CartItems.AddAsync(entity);
         }
 
-        public async Task DeleteAsync(Guid id)
+        public async Task DeleteCartAsync(Guid id)
         {
             var cart = await _context.Carts.FindAsync(id);
 
             if (cart != null)
             {
                 _context.Carts.Remove(cart);
+            }
+        }
+
+        public async Task DeleteCartItemAsync(Guid id)
+        {
+            var cartItem = await _context.CartItems.FindAsync(id);
+
+            if (cartItem != null)
+            {
+                _context.CartItems.Remove(cartItem);
             }
         }
 

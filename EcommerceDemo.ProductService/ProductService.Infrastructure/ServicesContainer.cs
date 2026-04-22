@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ProductService.Domain.Interfaces;
+using ProductService.Infrastructure.Messaging.Kafka.Consumers;
 using ProductService.Infrastructure.Persistence;
 using ProductService.Infrastructure.Repositories;
 
@@ -30,6 +31,8 @@ namespace ProductService.Infrastructure
                 var config = sp.GetRequiredService<ConsumerConfig>();
                 return new ConsumerBuilder<string, string>(config).Build();
             });
+
+            services.AddHostedService<CompletedOrderConsumer>();
 
             return services;
         }

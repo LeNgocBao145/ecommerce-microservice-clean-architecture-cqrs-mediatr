@@ -37,7 +37,7 @@ namespace OrderService.Application.Commands.DeleteCart
 
                 foreach (var cartItem in cart.CartItems.ToList())
                 {
-                    await _unitOfWork.CartRepository.DeleteAsync(cartItem.Id);
+                    await _unitOfWork.CartRepository.DeleteCartItemAsync(cartItem.Id);
                 }
 
                 _logger.LogInformation("Successfully deleted {ItemCount} cart items for user: {UserId}", itemCount, request.UserId);

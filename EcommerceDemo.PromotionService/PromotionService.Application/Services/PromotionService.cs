@@ -1,4 +1,5 @@
 ﻿using PromotionService.Application.Interfaces;
+using PromotionService.Domain.Entities;
 using PromotionService.Domain.Interfaces;
 
 namespace PromotionService.Application.Services
@@ -13,11 +14,20 @@ namespace PromotionService.Application.Services
 
             if (userLoyaltyPoints == null)
             {
-                return false;
+                int points = CalculatePoints(totalAmount);
+                userLoyaltyPoints = new Loyalty
+                {
+                    UserId = userId
+                };
+
+                userLoyaltyPoints.AddPoints(points);
+
+                var createdLoyalty = await _couponRepository.CreateLoyaltyAsync(userLoyaltyPoints);
+                return createdLoyalty != null;
             }
 
-            int points = CalculatePoints(totalAmount);
-            userLoyaltyPoints.AddPoints(points);
+            int pointsToAdd = CalculatePoints(totalAmount);
+            userLoyaltyPoints.AddPoints(pointsToAdd);
 
             var updatedLoyalty = await _couponRepository.UpdateLoyaltyAsync(userLoyaltyPoints);
 

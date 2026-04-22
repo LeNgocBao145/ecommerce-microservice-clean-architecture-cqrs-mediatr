@@ -8,6 +8,6 @@
         BRONZE = 5,
         SILVER = 10,
         GOLD = 15,
-        DIAMOND = 20
+        DIAMOND = 20,
     }
 }

@@ -23,11 +23,25 @@ namespace PromotionService.Infrastructure.Repositories
             return entity;
         }
 
-        public async Task<Loyalty> UpdateLoyaltyAsync(Loyalty entity)
+        public async Task<Loyalty> CreateLoyaltyAsync(Loyalty entity)
         {
-            context.Loyalties.Update(entity);
+            context.Loyalties.Add(entity);
             await context.SaveChangesAsync();
             return entity;
+        }
+
+        public async Task<Loyalty> UpdateLoyaltyAsync(Loyalty entity)
+        {
+            var existingEntity = await context.Loyalties.FindAsync(entity.UserId);
+            if (existingEntity == null) return null;
+
+            context.Entry(existingEntity).CurrentValues.SetValues(entity);
+
+            // Nếu có những trường tuyệt đối không cho phép sửa (ví dụ Ngày tạo)
+            // context.Entry(existingEntity).Property(x => x.CreatedAt).IsModified = false;
+
+            await context.SaveChangesAsync();
+            return existingEntity;
         }
 
         public async Task<Coupon?> GetCouponByAsync(Expression<Func<Coupon, bool>> predicate)

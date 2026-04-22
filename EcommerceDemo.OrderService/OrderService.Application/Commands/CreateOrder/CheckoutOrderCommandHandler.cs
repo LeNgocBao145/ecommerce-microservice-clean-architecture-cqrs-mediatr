@@ -1,7 +1,6 @@
 ﻿using MapsterMapper;
 using MediatR;
 using Microsoft.Extensions.Logging;
-using OrderService.Application.Commands.DeleteCart;
 using OrderService.Application.DTOs;
 using OrderService.Application.Interfaces;
 using OrderService.Domain.Entities;
@@ -44,27 +43,30 @@ namespace OrderService.Application.Commands.CreateOrder
                 _logger.LogInformation("Starting checkout process for user: {UserId}", request.UserId);
 
                 // Step 1: Retrieve cart
-                var cart = await GetAndValidateCartAsync(request.UserId, cancellationToken);
+                //var cart = await GetAndValidateCartAsync(request.UserId, cancellationToken);
 
                 // Step 2: Validate inventory
-                await ValidateStockAsync(cart, cancellationToken);
+                //await ValidateStockAsync(cart, cancellationToken);
 
                 // Step 3: Calculate totals and validate coupon
-                var (subtotal, discountAmount) = await CalculateTotalsAsync(request.CouponCode, request.UserId, cart, cancellationToken);
+                //var (subtotal, discountAmount) = await CalculateTotalsAsync(request.CouponCode, request.UserId, cart, cancellationToken);
 
                 // Step 4: Create order
-                var order = CreateOrderFromCart(request, cart, subtotal, discountAmount);
+                //var order = CreateOrderFromCart(request, cart, subtotal, discountAmount);
 
                 // Step 5: Track order (add to DbContext - chưa save)
-                await PersistOrderAsync(order, cancellationToken);
+                //await PersistOrderAsync(order, cancellationToken);
 
                 // Step 6: Delete cart (track deletion - chưa save)
-                await DeleteCartAsync(request.UserId, cancellationToken);
+                //await DeleteCartAsync(request.UserId, cancellationToken);
 
                 // Step 7: Save tất cả thay đổi (Order create + Cart delete)
-                await _unitOfWork.SaveAsync(cancellationToken);
+                //await _unitOfWork.SaveAsync(cancellationToken);
 
-                _logger.LogInformation("Order created successfully. OrderId: {OrderId}, UserId: {UserId}", order.Id, request.UserId);
+                //_logger.LogInformation("Order created successfully. OrderId: {OrderId}, UserId: {UserId}", order.Id, request.UserId);
+
+                // MOCK ORDER FOR TESTING (Tạm thời để test PublishOrderEventsAsync)
+                var order = CreateMockOrderForTesting(request);
 
                 // Step 8: Publish events (fire-and-forget)
                 await PublishOrderEventsAsync(order, cancellationToken);
@@ -76,6 +78,55 @@ namespace OrderService.Application.Commands.CreateOrder
                 _logger.LogError(ex, "Checkout process failed for user: {UserId}. Error: {ErrorMessage}", request.UserId, ex.Message);
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Creates a mock order for testing publish events (Temporary - remove when Steps 1-7 are uncommented).
+        /// </summary>
+        private Order CreateMockOrderForTesting(CheckoutOrderCommand request)
+        {
+            var order = new Order
+            {
+                Id = Guid.NewGuid(),
+                UserId = request.UserId,
+                CouponCode = request.CouponCode ?? string.Empty,
+                Subtotal = 1000000m,
+                DiscountAmount = 100000m,
+                TotalAmount = 900000m,
+                Notes = request.Notes,
+                OrderItems = new List<OrderItem>
+                {
+                    new OrderItem
+                    {
+                        Id = Guid.NewGuid(),
+                        OrderId = Guid.Empty, // Sẽ được set sau
+                        ProductId = Guid.NewGuid(),
+                        Quantity = 2,
+                        UnitPrice = 250000m,
+                        TotalPrice = 500000m
+                    },
+                    new OrderItem
+                    {
+                        Id = Guid.NewGuid(),
+                        OrderId = Guid.Empty, // Sẽ được set sau
+                        ProductId = Guid.NewGuid(),
+                        Quantity = 1,
+                        UnitPrice = 500000m,
+                        TotalPrice = 500000m
+                    }
+                }
+            };
+
+            // Set OrderId for all items
+            foreach (var item in order.OrderItems)
+            {
+                item.OrderId = order.Id;
+            }
+
+            _logger.LogInformation("Mock order created for testing. OrderId: {OrderId}, Items: {ItemCount}",
+                order.Id, order.OrderItems.Count);
+
+            return order;
         }
 
         /// <summary>
@@ -193,25 +244,32 @@ namespace OrderService.Application.Commands.CreateOrder
         }
 
         /// <summary>
-        /// Deletes cart using mediator pattern (Decoupling from delete logic).
-        /// Follows Dependency Inversion - uses mediator instead of direct repository calls.
+        /// Deletes cart directly using UnitOfWork (Ensures same transaction as order creation).
         /// </summary>
         private async Task DeleteCartAsync(Guid userId, CancellationToken cancellationToken)
         {
             try
             {
-                var deleteCartCommand = new DeleteCartCommand(userId);
-                var deleteResult = await _mediator.Send(deleteCartCommand, cancellationToken);
+                var cart = await _unitOfWork.CartRepository.GetCartByAsync(c => c.UserId == userId);
 
-                if (deleteResult.Success)
+                if (cart != null)
                 {
+                    var deletedItemCount = cart.CartItems?.Count ?? 0;
+
+                    // Delete all cart items
+                    foreach (var cartItem in cart.CartItems ?? [])
+                    {
+                        await _unitOfWork.CartRepository.DeleteCartItemAsync(cartItem.Id);
+                    }
+
+                    // Delete cart
+                    await _unitOfWork.CartRepository.DeleteCartAsync(cart.Id);
                     _logger.LogInformation("Cart deleted successfully for user: {UserId}. Items deleted: {Count}",
-                        userId, deleteResult.DeletedItemCount);
+                        userId, deletedItemCount);
                 }
                 else
                 {
-                    _logger.LogWarning("Failed to delete cart for user: {UserId}. Message: {Message}",
-                        userId, deleteResult.Message);
+                    _logger.LogWarning("Cart not found for user: {UserId}", userId);
                 }
             }
             catch (Exception ex)

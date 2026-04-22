@@ -1,4 +1,6 @@
 ﻿using Confluent.Kafka;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using PromotionService.Application.Events;
 using PromotionService.Application.Interfaces;
@@ -7,36 +9,32 @@ using System.Text.Json;
 namespace PromotionService.Infrastructure.Messaging.Kafka
 {
     public class CompletedOrderConsumer(
-        IConsumer<string, string> consumer,
-        IPromotionService promotionService,
-        ILogger<CompletedOrderConsumer> logger)
+        IServiceProvider serviceProvider,
+        ILogger<CompletedOrderConsumer> logger) : BackgroundService
     {
-        private readonly IConsumer<string, string> _consumer = consumer;
-        private readonly IPromotionService _promotionService = promotionService;
+        private readonly IServiceProvider _serviceProvider = serviceProvider;
         private readonly ILogger<CompletedOrderConsumer> _logger = logger;
 
-        public async Task ConsumeOrderEvents()
+        protected override async Task ExecuteAsync(CancellationToken cancellationToken)
         {
-            _consumer.Subscribe("update-user-loyalty-points");
+            using var scope = _serviceProvider.CreateScope();
+            var promotionService = scope.ServiceProvider.GetRequiredService<IPromotionService>();
+            var consumer = scope.ServiceProvider.GetRequiredService<IConsumer<string, string>>();
 
-            while (true)
+            consumer.Subscribe("update-user-loyalty-points");
+
+            while (!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    var consumeResult = _consumer.Consume();
+                    var consumeResult = consumer.Consume(cancellationToken);
                     var orderCompletedEvent = JsonSerializer.Deserialize<OrderCompletedEvent>(consumeResult.Message.Value);
 
                     if (orderCompletedEvent != null)
                     {
-                        // Calculate loyalty points based on the order total
-                        await _promotionService.UpdateLoyaltyPoints(orderCompletedEvent.UserId, orderCompletedEvent.TotalAmount);
-
+                        await promotionService.UpdateLoyaltyPoints(orderCompletedEvent.UserId, orderCompletedEvent.TotalAmount);
                         _logger.LogInformation("Loyalty points updated for user {UserId} with order total {TotalAmount}",
                             orderCompletedEvent.UserId, orderCompletedEvent.TotalAmount);
-                    }
-                    else
-                    {
-                        _logger.LogWarning("Failed to deserialize order completed event: null result");
                     }
                 }
                 catch (ConsumeException ex)
@@ -44,6 +42,11 @@ namespace PromotionService.Infrastructure.Messaging.Kafka
                     _logger.LogError(ex, "Error occurred while consuming order event: {ErrorReason}", ex.Error.Reason);
                 }
             }
+        }
+
+        public override void Dispose()
+        {
+            base.Dispose();
         }
     }
 }

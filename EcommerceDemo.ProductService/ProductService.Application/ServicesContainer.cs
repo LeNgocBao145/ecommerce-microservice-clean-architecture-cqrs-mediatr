@@ -13,11 +13,12 @@ namespace ProductService.Application
         {
             services.AddAutoMapper(cfg => cfg.AddProfile<MappingProfile>());
             services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
+
             services.AddMediatR(ctg =>
             {
                 ctg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
-                //validation
-                ctg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehaviour<,>));
+                // Register behavior with Transient lifetime to ensure scoped services can be resolved
+                ctg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehaviour<,>), ServiceLifetime.Transient);
             });
 
             return services;
